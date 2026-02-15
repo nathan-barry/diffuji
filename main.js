@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
+import { MTLLoader } from "three/addons/loaders/MTLLoader.js";
 
 const el = document.getElementById("viewer");
 const title = document.getElementById("title");
@@ -36,31 +37,47 @@ scene.add(rimLight);
 
 let model = null;
 
-const objLoader = new OBJLoader();
-objLoader.setPath("assets/");
-objLoader.load("camera.obj", (o) => {
-  o.traverse((c) => {
-    if (c.isMesh) {
-      c.material = new THREE.MeshStandardMaterial({
-        color: 0x888888,
-        metalness: 0.4,
-        roughness: 0.4,
-      });
-    }
+// Material overrides: map MTL names → MeshStandardMaterial props
+const materialOverrides = {
+  White_Plastic: { color: 0xebe9e4, metalness: 0.0, roughness: 0.45 },
+  Dark_Plastic: { color: 0x4a4a4a, metalness: 0.0, roughness: 0.6 },
+  Lens_Glass: { color: 0x2a2a35, metalness: 0.3, roughness: 0.05 },
+  Metal_Accent: { color: 0x8d8f94, metalness: 0.7, roughness: 0.25 },
+};
+
+const mtlLoader = new MTLLoader();
+mtlLoader.setPath("assets/");
+mtlLoader.load("camera.mtl", (materials) => {
+  materials.preload();
+
+  const objLoader = new OBJLoader();
+  objLoader.setMaterials(materials);
+  objLoader.setPath("assets/");
+  objLoader.load("camera.obj", (o) => {
+    // Replace loaded materials with MeshStandardMaterial for PBR rendering
+    o.traverse((c) => {
+      if (c.isMesh) {
+        const name = c.material?.name;
+        const props = materialOverrides[name];
+        if (props) {
+          c.material = new THREE.MeshStandardMaterial(props);
+        }
+      }
+    });
+
+    o.rotation.x = -Math.PI / 2;
+    o.rotation.z = -Math.PI / 2;
+    o.updateMatrixWorld(true);
+
+    const box = new THREE.Box3().setFromObject(o);
+    const center = box.getCenter(new THREE.Vector3());
+    o.position.sub(center);
+
+    const pivot = new THREE.Group();
+    pivot.add(o);
+    scene.add(pivot);
+    model = pivot;
   });
-
-  o.rotation.x = -Math.PI / 2;
-  o.rotation.z = -Math.PI / 2;
-  o.updateMatrixWorld(true);
-
-  const box = new THREE.Box3().setFromObject(o);
-  const center = box.getCenter(new THREE.Vector3());
-  o.position.sub(center);
-
-  const pivot = new THREE.Group();
-  pivot.add(o);
-  scene.add(pivot);
-  model = pivot;
 });
 
 function ease(t) {
