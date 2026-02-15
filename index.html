@@ -23,9 +23,10 @@
             }
 
             .receipt {
-                max-width: 600px;
+                width: 40ch;
+                max-width: 100%;
                 margin: 0 auto;
-                padding: 3rem 1.5rem;
+                padding: 3rem 0;
             }
 
             .receipt pre {
@@ -38,11 +39,13 @@
             }
 
             #canvas-container {
-                width: 100%;
+                width: 80vw;
+                max-width: 600px;
                 aspect-ratio: 1 / 1;
                 cursor: grab;
                 position: relative;
-                margin: 1.5rem 0;
+                left: 50%;
+                transform: translateX(-50%);
             }
 
             #canvas-container:active {
@@ -58,7 +61,8 @@
             .drag-hint {
                 position: absolute;
                 bottom: 0.5rem;
-                left: 0;
+                left: 50%;
+                transform: translateX(-50%);
                 font-size: 14px;
                 color: #999;
                 pointer-events: none;
@@ -66,7 +70,12 @@
             }
 
             .photos-section {
-                margin: 1.5rem 0;
+                width: 80vw;
+                max-width: 600px;
+                margin: 1.5rem auto;
+                position: relative;
+                left: 50%;
+                transform: translateX(-50%);
             }
 
             .photos-section img {
@@ -80,22 +89,21 @@
         <div class="receipt">
             <pre>
 ========================================
-  diffuji
+  DIFFUJI
 ========================================
-a disposable camera for the AI era
-built at treehacks 2025
-----------------------------------------</pre
-            >
+a diffusion powered disposable camera
+built at treehacks 2026!
+            </pre>
 
             <div id="canvas-container">
                 <span class="drag-hint">[drag to rotate]</span>
             </div>
 
             <pre>
-----------------------------------------
-
+========================================
   PHOTOS
-  ------</pre
+========================================
+  </pre
             >
 
             <div class="photos-section">
@@ -103,11 +111,9 @@ built at treehacks 2025
             </div>
 
             <pre>
-----------------------------------------
-
+========================================
   WHAT IS IT?
-  -----------
-
+========================================
 diffuji is a disposable camera built
 at TreeHacks 2025. a raspberry pi zero
 2w with a camera and thermal receipt
@@ -119,10 +125,8 @@ transforms it -- then prints the result
 on receipt paper.
 
 ========================================
-
   MODES
-  -----
-
+========================================
 FILTER MODES use diffusion models to
 restyle your photos:
 
@@ -139,10 +143,8 @@ to analyze what the camera sees:
   * identify objects and landmarks
 
 ========================================
-
   PROVIDERS
-  ---------
-
+========================================
 each request is routed to one of four
 AI providers so you can A/B test the
 same prompt across different backends:
@@ -152,9 +154,8 @@ same prompt across different backends:
   [3] Modal     (flux kontext on h100)
   [4] Perplexity (sonar pro web search)
 
-========================================
-            treehacks 2025
-========================================
+
+            treehacks 2026
 </pre
             >
         </div>
@@ -252,7 +253,7 @@ same prompt across different backends:
                     object.position.sub(center);
 
                     scene.add(object);
-                    controls.target.set(0, 0, 0);
+                    controls.target.set(0, -1, 0);
                     controls.update();
                 });
             });
