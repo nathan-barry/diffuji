@@ -1,6 +1,6 @@
 # diffuji
 
-A diffusion-powered disposable camera built at TreeHacks 2026.
+A diffusion-powered instant camera built at TreeHacks 2026.
 
 A Raspberry Pi Zero 2W with a camera and thermal receipt printer lives inside a custom housing. Snap a photo, pick a mode, and the image gets sent to an AI backend that transforms it -- then prints the result on receipt paper.
 
