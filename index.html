@@ -30,7 +30,7 @@
                 left: 50%;
                 transform: translate(-50%, -50%);
                 width: 80vw;
-                max-width: 600px;
+                max-width: 500px;
                 aspect-ratio: 1;
                 z-index: 10;
                 pointer-events: none;
@@ -311,9 +311,9 @@ on receipt paper.
                 if (model) model.rotation.y = eased * Math.PI;
 
                 // Move viewer up, zoom in, then exit off screen
-                el.style.top = 50 - eased * 70 - exitT * 40 + "%";
+                el.style.top = 55 - eased * 75 - exitT * 40 + "%";
                 const isMobile = window.innerWidth <= 600;
-                const scaleAmount = isMobile ? 2 : 0.6;
+                const scaleAmount = isMobile ? 2 : 1;
                 el.style.transform = `translate(-50%, -50%) scale(${1 + eased * scaleAmount})`;
 
                 // Fade title and scroll hint
@@ -323,7 +323,7 @@ on receipt paper.
                 // Receipt paper positioning
                 const receiptHeight = receipt.offsetHeight;
                 const viewerRect = el.getBoundingClientRect();
-                const cameraBottom = viewerRect.top + viewerRect.height * 0.75;
+                const cameraBottom = viewerRect.top + viewerRect.height * 0.73;
 
                 if (exitT > 0) {
                     if (!receiptWrapper._lockedTop)
