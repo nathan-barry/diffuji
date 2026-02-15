@@ -20,13 +20,10 @@
                 overflow-x: hidden;
             }
 
-            /* Scroll spacer — drives the animation */
             #scroll-spacer {
                 height: 600vh;
-                position: relative;
             }
 
-            /* 3D viewer stays fixed in center during scroll */
             #viewer {
                 position: fixed;
                 top: 50%;
@@ -44,10 +41,9 @@
                 display: block;
             }
 
-            /* Title overlay */
             #title {
                 position: fixed;
-                top: 15%;
+                top: 10%;
                 left: 50%;
                 transform: translateX(-50%);
                 text-align: center;
@@ -74,7 +70,6 @@
                 margin-top: 0.5rem;
             }
 
-            /* Scroll hint */
             #scroll-hint {
                 position: fixed;
                 bottom: 2rem;
@@ -96,29 +91,29 @@
                 }
             }
 
-            /* Receipt paper — emerges from behind camera */
             #receipt-wrapper {
                 position: fixed;
                 top: 50%;
                 left: 50%;
                 transform: translateX(-50%);
+                font-family: monospace;
+                font-size: 14px;
                 width: 44ch;
                 max-width: 90vw;
                 z-index: 15;
                 overflow: hidden;
                 pointer-events: none;
+                visibility: hidden;
             }
 
             #receipt {
                 background: #f5f0e8;
                 color: #2a2a2a;
-                font-family: monospace;
-                font-size: 14px;
+                font: inherit;
                 line-height: 1.6;
                 padding: 2rem 2ch;
                 transform: translateY(-100%);
             }
-
             #receipt pre {
                 font: inherit;
                 white-space: pre-wrap;
@@ -127,7 +122,6 @@
             #receipt a {
                 color: #2a2a2a;
             }
-
             #receipt #photos {
                 margin: 0.5rem 0;
             }
@@ -135,17 +129,15 @@
                 width: 100%;
                 display: block;
             }
-
-            /* Once scroll is done, unfix everything and let receipt flow */
-            .scrolled-past #viewer {
-                position: absolute;
-                top: auto;
-                bottom: 0;
+            @media (max-width: 600px) {
+                #receipt-wrapper {
+                    font-size: 13px;
+                    max-width: 96vw;
+                }
             }
         </style>
     </head>
     <body>
-        <!-- This tall div drives the scroll animation -->
         <div id="scroll-spacer"></div>
 
         <div id="title">
@@ -161,56 +153,8 @@
             <div id="receipt">
                 <!-- prettier-ignore -->
                 <pre>
-========================================
-  DIFFUJI
-========================================
-a diffusion powered disposable camera
-built at treehacks 2026!
 
-========================================
-  WHAT IS IT?
-========================================
-diffuji is a disposable camera built
-at TreeHacks 2025. a raspberry pi zero
-2w with a camera and thermal receipt
-printer lives inside a custom housing.
-
-snap a photo, pick a mode, and the
-image gets sent to an AI backend that
-transforms it -- then prints the result
-on receipt paper.
-</pre>
-                <div id="photos">
-                    <img src="assets/photos.png" alt="Photos from diffuji" />
-                </div>
-                <!-- prettier-ignore -->
-                <pre>
-========================================
-  MODES
-========================================
-FILTER MODES use diffusion models to
-restyle your photos:
-
-  * greek statues
-  * studio ghibli style
-  * replace everyone with ducks
-  * time-travel to different years
-  * and more...
-
-SEARCH MODES use perplexity web search
-to analyze what the camera sees:
-
-  * estimate price of visible items
-  * identify objects and landmarks
-
-each request is routed to one of four
-AI providers so you can A/B test the
-same prompt across different backends:
-
-  [1] OpenAI    (gpt-4o responses api)
-  [2] Gemini    (2.5 flash)
-  [3] Modal     (flux kontext on h100)
-  [4] Perplexity (sonar pro web search)
+            treehacks 2026
 
 
 ========================================
@@ -222,8 +166,50 @@ TEAM
   * <a href="https://pranav.cc/">Pranav Tadepalli</a>
   * <a href="https://laineylabs.com/">Lainey Leslie</a>
 
+========================================
+  MODES
+========================================
+Each request is routed to one of four
+AI providers so you can A/B test the
+same prompt across different backends:
 
-            treehacks 2026
+  [1] OpenAI    (gpt-4o responses api)
+  [2] Gemini    (2.5 flash)
+  [3] Modal     (flux kontext on h100)
+  [4] Perplexity (sonar pro web search)
+
+SEARCH MODES use perplexity web search
+to analyze what the camera sees:
+
+  * estimate price of visible items
+  * identify objects and landmarks
+
+FILTER MODES use diffusion models to
+restyle your photos:
+
+  * greek statues
+  * studio ghibli style
+  * replace everyone with ducks
+  * time-travel to different years
+  * and more...
+</pre>
+                <div id="photos">
+                    <img src="assets/photos.png" alt="Photos from diffuji" />
+                </div>
+                <!-- prettier-ignore -->
+                <pre>
+========================================
+WHAT IS IT?
+========================================
+diffuji is a disposable camera built
+at TreeHacks 2025. a raspberry pi zero
+2w with a camera and thermal receipt
+printer lives inside a custom housing.
+
+snap a photo, pick a mode, and the
+image gets sent to an AI backend that
+transforms it -- then prints the result
+on receipt paper.
 </pre>
             </div>
         </div>
@@ -249,7 +235,6 @@ TEAM
             const spacer = document.getElementById("scroll-spacer");
 
             const scene = new THREE.Scene();
-
             const renderer = new THREE.WebGLRenderer({
                 antialias: true,
                 alpha: true,
@@ -261,49 +246,47 @@ TEAM
             el.appendChild(renderer.domElement);
 
             const cam = new THREE.PerspectiveCamera(35, 1, 0.1, 1000);
-            cam.position.set(0, 2, 28);
+            cam.position.set(0, 0, 28);
 
             scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-            const key = new THREE.DirectionalLight(0xffffff, 1.8);
-            key.position.set(10, 15, 10);
-            scene.add(key);
-            const fill = new THREE.DirectionalLight(0xaabbff, 0.6);
-            fill.position.set(-10, 5, -5);
-            scene.add(fill);
-            const rim = new THREE.DirectionalLight(0xffeedd, 0.8);
-            rim.position.set(0, -5, -15);
-            scene.add(rim);
+            const keyLight = new THREE.DirectionalLight(0xffffff, 1.8);
+            keyLight.position.set(10, 15, 10);
+            scene.add(keyLight);
+            const fillLight = new THREE.DirectionalLight(0xaabbff, 0.6);
+            fillLight.position.set(-10, 5, -5);
+            scene.add(fillLight);
+            const rimLight = new THREE.DirectionalLight(0xffeedd, 0.8);
+            rimLight.position.set(0, -5, -15);
+            scene.add(rimLight);
 
             let model = null;
 
-            const mtl = new MTLLoader();
-            mtl.setPath("assets/");
-            mtl.load("camera.mtl", (mats) => {
+            const mtlLoader = new MTLLoader();
+            mtlLoader.setPath("assets/");
+            mtlLoader.load("camera.mtl", (mats) => {
                 mats.preload();
-                const obj = new OBJLoader();
-                obj.setMaterials(mats);
-                obj.setPath("assets/");
-                obj.load("camera.obj", (o) => {
+                const objLoader = new OBJLoader();
+                objLoader.setMaterials(mats);
+                objLoader.setPath("assets/");
+                objLoader.load("camera.obj", (o) => {
                     o.traverse((c) => {
-                        if (c.isMesh)
+                        if (c.isMesh) {
                             c.material = new THREE.MeshStandardMaterial({
                                 color: 0x888888,
                                 metalness: 0.4,
                                 roughness: 0.4,
                             });
+                        }
                     });
 
-                    // Stand upright, rotated so lens faces viewer
                     o.rotation.x = -Math.PI / 2;
                     o.rotation.z = -Math.PI / 2;
                     o.updateMatrixWorld(true);
 
-                    // Center
                     const box = new THREE.Box3().setFromObject(o);
                     const center = box.getCenter(new THREE.Vector3());
                     o.position.sub(center);
 
-                    // Wrap in a pivot so we can rotate around Y cleanly
                     const pivot = new THREE.Group();
                     pivot.add(o);
                     scene.add(pivot);
@@ -311,34 +294,27 @@ TEAM
                 });
             });
 
-            // Scroll-driven animation
+            function ease(t) {
+                return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+            }
+
             function onScroll() {
                 const maxScroll = spacer.scrollHeight - window.innerHeight;
                 const t = Math.max(0, Math.min(1, window.scrollY / maxScroll));
 
-                // Phase 1: 0-0.2 — camera rotates + moves to top + zooms
-                // Phase 2: 0.2-0.8 — camera near top, receipt prints out
-                // Phase 3: 0.8-1.0 — camera exits up, receipt stays fixed
-
                 const rotateT = Math.min(1, t / 0.2);
-                const paperT = Math.max(0, (t - 0.2) / 0.6); // 0-1 over 20%-80%
-                const exitT = Math.max(0, (t - 0.8) / 0.2); // 0-1 over 80%-100%
+                const paperT = Math.max(0, (t - 0.2) / 0.6);
+                const exitT = Math.max(0, (t - 0.8) / 0.2);
+                const eased = ease(rotateT);
 
-                // Smooth easing for rotation
-                const eased =
-                    rotateT < 0.5
-                        ? 2 * rotateT * rotateT
-                        : 1 - Math.pow(-2 * rotateT + 2, 2) / 2;
+                // Rotate camera model
+                if (model) model.rotation.y = eased * Math.PI;
 
-                if (model) {
-                    model.rotation.y = eased * Math.PI;
-                }
-
-                // Camera position: 50% -> -20% during rotate, stays there, then exits
-                const viewerTop = 50 - eased * 70 - exitT * 40;
-                const viewerScale = 1 + eased * 0.5;
-                el.style.top = viewerTop + "%";
-                el.style.transform = `translate(-50%, -50%) scale(${viewerScale})`;
+                // Move viewer up, zoom in, then exit off screen
+                el.style.top = 50 - eased * 70 - exitT * 40 + "%";
+                const isMobile = window.innerWidth <= 600;
+                const scaleAmount = isMobile ? 2 : 0.6;
+                el.style.transform = `translate(-50%, -50%) scale(${1 + eased * scaleAmount})`;
 
                 // Fade title and scroll hint
                 title.style.opacity = Math.max(0, 1 - t * 8);
@@ -347,19 +323,15 @@ TEAM
                 // Receipt paper positioning
                 const receiptHeight = receipt.offsetHeight;
                 const viewerRect = el.getBoundingClientRect();
-                const cameraBottom = viewerRect.top + viewerRect.height * 0.8;
+                const cameraBottom = viewerRect.top + viewerRect.height * 0.75;
 
                 if (exitT > 0) {
-                    // Phase 3: receipt stays fixed, camera moves away
-                    // Lock receipt wrapper to where it was at start of phase 3
-                    if (!receiptWrapper._lockedTop) {
+                    if (!receiptWrapper._lockedTop)
                         receiptWrapper._lockedTop = cameraBottom;
-                    }
                     receiptWrapper.style.top = receiptWrapper._lockedTop + "px";
                     receiptWrapper.style.height =
                         window.innerHeight - receiptWrapper._lockedTop + "px";
                 } else {
-                    // Phase 1-2: receipt follows camera
                     receiptWrapper._lockedTop = null;
                     receiptWrapper.style.top = cameraBottom + "px";
                     receiptWrapper.style.height =
@@ -369,12 +341,11 @@ TEAM
                 if (paperT > 0) {
                     receiptWrapper.style.visibility = "visible";
                     receiptWrapper.style.pointerEvents = "auto";
-                    const slideAmount = Math.min(1, paperT) * receiptHeight;
-                    receipt.style.transform = `translateY(${-receiptHeight + slideAmount}px)`;
+                    receipt.style.transform = `translateY(${-receiptHeight + Math.min(1, paperT) * receiptHeight}px)`;
                 } else {
                     receiptWrapper.style.visibility = "hidden";
                     receiptWrapper.style.pointerEvents = "none";
-                    receipt.style.transform = `translateY(-100%)`;
+                    receipt.style.transform = "translateY(-100%)";
                 }
             }
 
