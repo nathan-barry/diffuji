@@ -5,14 +5,11 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>diffuji</title>
         <style>
-            @import url("https://fonts.googleapis.com/css2?family=Courier+Prime&display=swap");
-
             * {
                 margin: 0;
                 padding: 0;
                 box-sizing: border-box;
             }
-
             body {
                 background: #f5f0e8;
                 color: #2a2a2a;
@@ -21,84 +18,71 @@
                 line-height: 1.6;
                 overflow-x: hidden;
             }
-
-            .receipt {
+            #page {
                 width: 40ch;
                 max-width: 100%;
                 margin: 0 auto;
                 padding: 3rem 0;
             }
-
-            .receipt pre {
+            pre {
+                font: inherit;
                 white-space: pre-wrap;
                 word-wrap: break-word;
-                font-family: inherit;
-                font-size: inherit;
-                line-height: inherit;
-                color: inherit;
             }
-
-            #canvas-container {
+            #viewer {
                 width: 80vw;
                 max-width: 600px;
-                aspect-ratio: 1 / 1;
+                aspect-ratio: 1;
                 cursor: grab;
                 position: relative;
                 left: 50%;
                 transform: translateX(-50%);
             }
-
-            #canvas-container:active {
+            #viewer:active {
                 cursor: grabbing;
             }
-
-            #canvas-container canvas {
+            #viewer canvas {
                 width: 100% !important;
                 height: 100% !important;
                 display: block;
             }
-
-            .drag-hint {
+            #hint {
                 position: absolute;
                 bottom: 0.5rem;
                 left: 50%;
                 transform: translateX(-50%);
-                font-size: 14px;
                 color: #999;
                 pointer-events: none;
                 transition: opacity 0.5s;
             }
-
-            .photos-section {
+            #photos {
                 width: 80vw;
                 max-width: 600px;
-                margin: 1.5rem auto;
                 position: relative;
                 left: 50%;
                 transform: translateX(-50%);
             }
-
-            .photos-section img {
+            #photos img {
                 width: 100%;
-                height: auto;
                 display: block;
+            }
+            a {
+                color: #2a2a2a;
             }
         </style>
     </head>
     <body>
-        <div class="receipt">
+        <div id="page">
+            <!-- prettier-ignore -->
             <pre>
 ========================================
   DIFFUJI
 ========================================
 a diffusion powered disposable camera
 built at treehacks 2026!
-            </pre>
-
-            <div id="canvas-container">
-                <span class="drag-hint">[drag to rotate]</span>
-            </div>
-
+</pre>
+            <div id="viewer"><span id="hint">[drag to rotate]</span></div>
+            <!-- prettier-ignore -->
             <pre>
 
 ========================================
@@ -113,11 +97,12 @@ snap a photo, pick a mode, and the
 image gets sent to an AI backend that
 transforms it -- then prints the result
 on receipt paper.
-            </pre>
 
-            <div class="photos-section">
-                <img src="assets/photos.png" alt="Photos taken with diffuji" />
+</pre>
+            <div id="photos">
+                <img src="assets/photos.png" alt="Photos from diffuji" />
             </div>
+            <!-- prettier-ignore -->
             <pre>
 
 ========================================
@@ -138,9 +123,6 @@ to analyze what the camera sees:
   * estimate price of visible items
   * identify objects and landmarks
 
-========================================
-  PROVIDERS
-========================================
 each request is routed to one of four
 AI providers so you can A/B test the
 same prompt across different backends:
@@ -151,11 +133,19 @@ same prompt across different backends:
   [4] Perplexity (sonar pro web search)
 
 
-            treehacks 2026
-</pre
-            >
-        </div>
+========================================
+TEAM
+========================================
 
+  * <a href="https://nathan.rs">Nathan Barry</a>
+  * <a href="https://alexkranias.com">Alex Kranias</a>
+  * <a href="https://pranav.cc/">Pranav Tadepalli</a>
+  * <a href="https://laineylabs.com/">Lainey Leslie</a>
+
+
+            treehacks 2026
+</pre>
+        </div>
         <script type="importmap">
             {
                 "imports": {
@@ -164,16 +154,14 @@ same prompt across different backends:
                 }
             }
         </script>
-
         <script type="module">
             import * as THREE from "three";
             import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
             import { MTLLoader } from "three/addons/loaders/MTLLoader.js";
             import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-            const container = document.getElementById("canvas-container");
-            const hint = container.querySelector(".drag-hint");
-
+            const el = document.getElementById("viewer");
+            const hint = document.getElementById("hint");
             const scene = new THREE.Scene();
 
             const renderer = new THREE.WebGLRenderer({
@@ -181,94 +169,81 @@ same prompt across different backends:
                 alpha: true,
             });
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setSize(el.clientWidth, el.clientHeight);
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
             renderer.toneMappingExposure = 1.2;
-            container.appendChild(renderer.domElement);
+            el.appendChild(renderer.domElement);
 
-            const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 1000);
-            camera.position.set(18, 10, 20);
+            const cam = new THREE.PerspectiveCamera(35, 1, 0.1, 1000);
+            cam.position.set(18, 10, 20);
 
-            const controls = new OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.06;
-            controls.enableZoom = false;
-            controls.enablePan = false;
-            controls.autoRotate = true;
-            controls.autoRotateSpeed = 1.5;
-            controls.minPolarAngle = Math.PI * 0.3;
-            controls.maxPolarAngle = Math.PI * 0.7;
+            const ctrl = new OrbitControls(cam, renderer.domElement);
+            ctrl.enableDamping = true;
+            ctrl.dampingFactor = 0.06;
+            ctrl.enableZoom = false;
+            ctrl.enablePan = false;
+            ctrl.autoRotate = true;
+            ctrl.autoRotateSpeed = 1.5;
+            ctrl.minPolarAngle = Math.PI * 0.3;
+            ctrl.maxPolarAngle = Math.PI * 0.7;
 
             let hinted = false;
-            controls.addEventListener("start", () => {
+            ctrl.addEventListener("start", () => {
                 if (!hinted) {
                     hint.style.opacity = "0";
                     hinted = true;
                 }
             });
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const key = new THREE.DirectionalLight(0xffffff, 1.8);
+            key.position.set(10, 15, 10);
+            scene.add(key);
+            const fill = new THREE.DirectionalLight(0xaabbff, 0.6);
+            fill.position.set(-10, 5, -5);
+            scene.add(fill);
+            const rim = new THREE.DirectionalLight(0xffeedd, 0.8);
+            rim.position.set(0, -5, -15);
+            scene.add(rim);
 
-            const keyLight = new THREE.DirectionalLight(0xffffff, 1.8);
-            keyLight.position.set(10, 15, 10);
-            scene.add(keyLight);
-
-            const fillLight = new THREE.DirectionalLight(0xaabbff, 0.6);
-            fillLight.position.set(-10, 5, -5);
-            scene.add(fillLight);
-
-            const rimLight = new THREE.DirectionalLight(0xffeedd, 0.8);
-            rimLight.position.set(0, -5, -15);
-            scene.add(rimLight);
-
-            const mtlLoader = new MTLLoader();
-            mtlLoader.setPath("assets/");
-            mtlLoader.load("camera.mtl", (materials) => {
-                materials.preload();
-
-                const objLoader = new OBJLoader();
-                objLoader.setMaterials(materials);
-                objLoader.setPath("assets/");
-                objLoader.load("camera.obj", (object) => {
-                    object.traverse((child) => {
-                        if (child.isMesh) {
-                            child.material = new THREE.MeshStandardMaterial({
+            const mtl = new MTLLoader();
+            mtl.setPath("assets/");
+            mtl.load("camera.mtl", (mats) => {
+                mats.preload();
+                const obj = new OBJLoader();
+                obj.setMaterials(mats);
+                obj.setPath("assets/");
+                obj.load("camera.obj", (o) => {
+                    o.traverse((c) => {
+                        if (c.isMesh)
+                            c.material = new THREE.MeshStandardMaterial({
                                 color: 0x888888,
                                 metalness: 0.4,
                                 roughness: 0.4,
                             });
-                        }
                     });
-
-                    object.rotation.x = -Math.PI / 2;
-
-                    object.updateMatrixWorld(true);
-                    const box = new THREE.Box3().setFromObject(object);
+                    o.rotation.x = -Math.PI / 2;
+                    o.updateMatrixWorld(true);
+                    const box = new THREE.Box3().setFromObject(o);
                     const center = box.getCenter(new THREE.Vector3());
-                    object.position.sub(center);
-
-                    scene.add(object);
-                    controls.target.set(0, -1, 0);
-                    controls.update();
+                    o.position.sub(center);
+                    scene.add(o);
+                    ctrl.target.set(0, -1, 0);
+                    ctrl.update();
                 });
             });
 
-            function onResize() {
-                const w = container.clientWidth;
-                const h = container.clientHeight;
-                camera.aspect = w / h;
-                camera.updateProjectionMatrix();
-                renderer.setSize(w, h);
-            }
-            window.addEventListener("resize", onResize);
+            window.addEventListener("resize", () => {
+                cam.aspect = el.clientWidth / el.clientHeight;
+                cam.updateProjectionMatrix();
+                renderer.setSize(el.clientWidth, el.clientHeight);
+            });
 
-            function animate() {
-                requestAnimationFrame(animate);
-                controls.update();
-                renderer.render(scene, camera);
-            }
-            animate();
+            (function loop() {
+                requestAnimationFrame(loop);
+                ctrl.update();
+                renderer.render(scene, cam);
+            })();
         </script>
     </body>
 </html>
