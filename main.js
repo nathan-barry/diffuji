@@ -213,8 +213,8 @@ function onScroll() {
   el.style.transform = `translate(-50%, -50%) scale(${1 + eased * scaleAmount})`;
 
   // Fade title and scroll hint
-  title.style.opacity = Math.max(0, 1 - t * 8);
-  scrollHint.style.opacity = Math.max(0, 1 - t * 8);
+  title.style.opacity = Math.max(0, 1 - t * 15);
+  scrollHint.style.opacity = Math.max(0, 1 - t * 15);
 
   // Receipt paper positioning
   const receiptHeight = receipt.offsetHeight;
