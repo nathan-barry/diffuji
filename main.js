@@ -38,11 +38,15 @@ const cam = new THREE.PerspectiveCamera(35, 1, 0.1, 1000);
 cam.position.set(0, 0, 28);
 
 // --- Post-processing ---
-const renderTarget = new THREE.WebGLRenderTarget(el.clientWidth, el.clientHeight, {
-  format: THREE.RGBAFormat,
-  type: THREE.HalfFloatType,
-  samples: 4,
-});
+const renderTarget = new THREE.WebGLRenderTarget(
+  el.clientWidth,
+  el.clientHeight,
+  {
+    format: THREE.RGBAFormat,
+    type: THREE.HalfFloatType,
+    samples: 4,
+  },
+);
 const composer = new EffectComposer(renderer, renderTarget);
 composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 composer.setSize(el.clientWidth, el.clientHeight);
@@ -55,7 +59,7 @@ composer.addPass(renderPass);
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(el.clientWidth, el.clientHeight),
   0.08, // strength
-  0.4,  // radius
+  0.4, // radius
   0.92, // threshold
 );
 composer.addPass(bloomPass);
@@ -113,6 +117,70 @@ scene.add(topLight);
 let model = null;
 
 // Material overrides: map MTL names → MeshPhysicalMaterial props
+// Shader injection for subtle 3D-printed plastic texture (no UVs needed)
+function addPlasticTexture(material, strength = 0.08) {
+  material.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader.replace(
+      "#include <common>",
+      `#include <common>
+       varying vec3 vWorldPos;`,
+    );
+    shader.vertexShader = shader.vertexShader.replace(
+      "#include <worldpos_vertex>",
+      `#include <worldpos_vertex>
+       vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;`,
+    );
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <common>",
+      `#include <common>
+       varying vec3 vWorldPos;
+       vec3 hash3(vec3 p) {
+         p = vec3(dot(p, vec3(127.1, 311.7, 74.7)),
+                  dot(p, vec3(269.5, 183.3, 246.1)),
+                  dot(p, vec3(113.5, 271.9, 124.6)));
+         return -1.0 + 2.0 * fract(sin(p) * 43758.5453123);
+       }
+       float gnoise(vec3 p) {
+         vec3 i = floor(p);
+         vec3 f = fract(p);
+         vec3 u = f * f * (3.0 - 2.0 * f);
+         return mix(mix(mix(dot(hash3(i + vec3(0,0,0)), f - vec3(0,0,0)),
+                            dot(hash3(i + vec3(1,0,0)), f - vec3(1,0,0)), u.x),
+                        mix(dot(hash3(i + vec3(0,1,0)), f - vec3(0,1,0)),
+                            dot(hash3(i + vec3(1,1,0)), f - vec3(1,1,0)), u.x), u.y),
+                    mix(mix(dot(hash3(i + vec3(0,0,1)), f - vec3(0,0,1)),
+                            dot(hash3(i + vec3(1,0,1)), f - vec3(1,0,1)), u.x),
+                        mix(dot(hash3(i + vec3(0,1,1)), f - vec3(0,1,1)),
+                            dot(hash3(i + vec3(1,1,1)), f - vec3(1,1,1)), u.x), u.y), u.z);
+       }`,
+    );
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <normal_fragment_maps>",
+      `#include <normal_fragment_maps>
+       {
+         float eps = 0.01;
+         vec3 noiseGrad = vec3(0.0);
+         float amp = 1.0;
+         float freq = 40.0;
+         float totalAmp = 0.0;
+         for (int i = 0; i < 3; i++) {
+           vec3 wp = vWorldPos * freq;
+           float n0 = gnoise(wp);
+           float nx = gnoise(wp + vec3(eps, 0.0, 0.0));
+           float ny = gnoise(wp + vec3(0.0, eps, 0.0));
+           float nz = gnoise(wp + vec3(0.0, 0.0, eps));
+           noiseGrad += amp * (vec3(nx, ny, nz) - n0) / eps;
+           totalAmp += amp;
+           freq *= 2.0;
+           amp *= 0.5;
+         }
+         noiseGrad /= totalAmp;
+         normal = normalize(normal + noiseGrad * ${strength.toFixed(3)});
+       }`,
+    );
+  };
+}
+
 const materialOverrides = {
   White_Plastic: {
     color: 0xebe9e4,
@@ -123,7 +191,7 @@ const materialOverrides = {
     envMapIntensity: 0.6,
   },
   Dark_Plastic: {
-    color: 0x585858,
+    color: 0x6e6e6e,
     metalness: 0.0,
     roughness: 0.7,
     clearcoat: 0.1,
@@ -164,7 +232,13 @@ objLoader.load("camera.obj", (o) => {
       const name = c.material?.name;
       const props = materialOverrides[name];
       if (props) {
-        c.material = new THREE.MeshPhysicalMaterial(props);
+        const mat = new THREE.MeshPhysicalMaterial(props);
+        if (name === "Dark_Plastic") {
+          addPlasticTexture(mat, 0.14);
+        } else if (name.includes("Plastic")) {
+          addPlasticTexture(mat);
+        }
+        c.material = mat;
       }
     }
   });
