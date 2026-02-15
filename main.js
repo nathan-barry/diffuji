@@ -1,6 +1,10 @@
 import * as THREE from "three";
 import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
-import { MTLLoader } from "three/addons/loaders/MTLLoader.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 
 const el = document.getElementById("viewer");
 const title = document.getElementById("title");
@@ -14,70 +18,169 @@ const scene = new THREE.Scene();
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
   alpha: true,
+  powerPreference: "high-performance",
 });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(el.clientWidth, el.clientHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
+renderer.toneMappingExposure = 1.1;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 el.appendChild(renderer.domElement);
+
+// Environment map for realistic reflections
+const pmrem = new THREE.PMREMGenerator(renderer);
+pmrem.compileEquirectangularShader();
+const envMap = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environment = envMap;
+pmrem.dispose();
 
 const cam = new THREE.PerspectiveCamera(35, 1, 0.1, 1000);
 cam.position.set(0, 0, 28);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-const keyLight = new THREE.DirectionalLight(0xffffff, 1.8);
-keyLight.position.set(10, 15, 10);
+// --- Post-processing ---
+const renderTarget = new THREE.WebGLRenderTarget(el.clientWidth, el.clientHeight, {
+  format: THREE.RGBAFormat,
+  type: THREE.HalfFloatType,
+  samples: 4,
+});
+const composer = new EffectComposer(renderer, renderTarget);
+composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+composer.setSize(el.clientWidth, el.clientHeight);
+
+const renderPass = new RenderPass(scene, cam);
+renderPass.clearAlpha = 0;
+composer.addPass(renderPass);
+
+// Bloom — makes shiny metal and lens highlights glow
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(el.clientWidth, el.clientHeight),
+  0.08, // strength
+  0.4,  // radius
+  0.92, // threshold
+);
+composer.addPass(bloomPass);
+
+// Vignette shader
+const vignetteShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    darkness: { value: 0.4 },
+    offset: { value: 1.2 },
+  },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform float darkness;
+    uniform float offset;
+    varying vec2 vUv;
+    void main() {
+      vec4 texel = texture2D(tDiffuse, vUv);
+      vec2 uv = (vUv - 0.5) * 2.0;
+      float vig = clamp(1.0 - dot(uv, uv) * darkness + offset - 1.0, 0.0, 1.0);
+      gl_FragColor = vec4(texel.rgb * vig, texel.a);
+    }
+  `,
+};
+const vignettePass = new ShaderPass(vignetteShader);
+composer.addPass(vignettePass);
+
+// Lighting — key/fill/rim + soft ambient
+scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+
+const keyLight = new THREE.DirectionalLight(0xfff5e6, 2.2);
+keyLight.position.set(8, 12, 10);
 scene.add(keyLight);
-const fillLight = new THREE.DirectionalLight(0xaabbff, 0.6);
+
+const fillLight = new THREE.DirectionalLight(0xb0c4ff, 0.8);
 fillLight.position.set(-10, 5, -5);
 scene.add(fillLight);
-const rimLight = new THREE.DirectionalLight(0xffeedd, 0.8);
+
+const rimLight = new THREE.DirectionalLight(0xffeedd, 1.0);
 rimLight.position.set(0, -5, -15);
 scene.add(rimLight);
 
+// Subtle top-down light to lift shadows
+const topLight = new THREE.DirectionalLight(0xffffff, 0.3);
+topLight.position.set(0, 20, 0);
+scene.add(topLight);
+
 let model = null;
 
-// Material overrides: map MTL names → MeshStandardMaterial props
+// Material overrides: map MTL names → MeshPhysicalMaterial props
 const materialOverrides = {
-  White_Plastic: { color: 0xebe9e4, metalness: 0.0, roughness: 0.45 },
-  Dark_Plastic: { color: 0x4a4a4a, metalness: 0.0, roughness: 0.6 },
-  Lens_Glass: { color: 0x2a2a35, metalness: 0.3, roughness: 0.05 },
-  Metal_Accent: { color: 0x8d8f94, metalness: 0.7, roughness: 0.25 },
+  White_Plastic: {
+    color: 0xebe9e4,
+    metalness: 0.0,
+    roughness: 0.55,
+    clearcoat: 0.15,
+    clearcoatRoughness: 0.4,
+    envMapIntensity: 0.6,
+  },
+  Dark_Plastic: {
+    color: 0x585858,
+    metalness: 0.0,
+    roughness: 0.7,
+    clearcoat: 0.1,
+    clearcoatRoughness: 0.5,
+    envMapIntensity: 0.5,
+  },
+  Lens_Glass: {
+    color: 0x1a1a25,
+    metalness: 0.4,
+    roughness: 0.02,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.03,
+    reflectivity: 0.9,
+    envMapIntensity: 1.5,
+  },
+  Metal_Accent: {
+    color: 0xffffff,
+    metalness: 1.0,
+    roughness: 0.02,
+    envMapIntensity: 6.0,
+    emissive: 0x999999,
+  },
+  Yellow_Plastic: {
+    color: 0xf2c810,
+    metalness: 0.0,
+    roughness: 0.55,
+    clearcoat: 0.2,
+    clearcoatRoughness: 0.35,
+    envMapIntensity: 0.6,
+  },
 };
 
-const mtlLoader = new MTLLoader();
-mtlLoader.setPath("assets/");
-mtlLoader.load("camera.mtl", (materials) => {
-  materials.preload();
-
-  const objLoader = new OBJLoader();
-  objLoader.setMaterials(materials);
-  objLoader.setPath("assets/");
-  objLoader.load("camera.obj", (o) => {
-    // Replace loaded materials with MeshStandardMaterial for PBR rendering
-    o.traverse((c) => {
-      if (c.isMesh) {
-        const name = c.material?.name;
-        const props = materialOverrides[name];
-        if (props) {
-          c.material = new THREE.MeshStandardMaterial(props);
-        }
+const objLoader = new OBJLoader();
+objLoader.setPath("assets/");
+objLoader.load("camera.obj", (o) => {
+  o.traverse((c) => {
+    if (c.isMesh) {
+      const name = c.material?.name;
+      const props = materialOverrides[name];
+      if (props) {
+        c.material = new THREE.MeshPhysicalMaterial(props);
       }
-    });
-
-    o.rotation.x = -Math.PI / 2;
-    o.rotation.z = -Math.PI / 2;
-    o.updateMatrixWorld(true);
-
-    const box = new THREE.Box3().setFromObject(o);
-    const center = box.getCenter(new THREE.Vector3());
-    o.position.sub(center);
-
-    const pivot = new THREE.Group();
-    pivot.add(o);
-    scene.add(pivot);
-    model = pivot;
+    }
   });
+
+  o.rotation.x = -Math.PI / 2;
+  o.rotation.z = -Math.PI / 2;
+  o.updateMatrixWorld(true);
+
+  const box = new THREE.Box3().setFromObject(o);
+  const center = box.getCenter(new THREE.Vector3());
+  o.position.sub(center);
+
+  const pivot = new THREE.Group();
+  pivot.add(o);
+  scene.add(pivot);
+  model = pivot;
 });
 
 function ease(t) {
@@ -175,6 +278,8 @@ window.addEventListener("resize", () => {
   cam.aspect = el.clientWidth / el.clientHeight;
   cam.updateProjectionMatrix();
   renderer.setSize(el.clientWidth, el.clientHeight);
+  composer.setSize(el.clientWidth, el.clientHeight);
+  bloomPass.resolution.set(el.clientWidth, el.clientHeight);
   onScroll();
 });
 
@@ -182,5 +287,5 @@ onScroll();
 
 (function loop() {
   requestAnimationFrame(loop);
-  renderer.render(scene, cam);
+  composer.render();
 })();
