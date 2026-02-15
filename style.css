@@ -43,8 +43,8 @@ body {
     z-index: 20;
     pointer-events: none;
     font-family:
-        -apple-system, BlinkMacSystemFont, "SF Pro Display",
-        "Helvetica Neue", Helvetica, Arial, sans-serif;
+        -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue",
+        Helvetica, Arial, sans-serif;
 }
 #title h1 {
     font-size: clamp(2.5rem, 7vw, 5rem);
@@ -126,10 +126,11 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     padding: 3rem 2rem;
+    width: 90vw;
     text-align: center;
     font-family:
-        -apple-system, BlinkMacSystemFont, "SF Pro Display",
-        "Helvetica Neue", Helvetica, Arial, sans-serif;
+        -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue",
+        Helvetica, Arial, sans-serif;
     z-index: 5;
     opacity: 0;
     pointer-events: none;
